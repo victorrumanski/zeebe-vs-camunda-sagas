@@ -21,13 +21,11 @@ import io.zeebe.spring.client.ZeebeClientLifecycle;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class StartSagaAPI {
 	private static final Logger LOGGER = LoggerFactory.getLogger(StartSagaAPI.class);
-
 	@Autowired
 	private ZeebeClientLifecycle zeebeClient;
 
 	@PostMapping("/start")
 	public ResponseEntity<WorkflowInstanceEvent> start() {
-
 		Map<String, Object> variables = new HashMap<String, Object>();
 		variables.put("email", "luis@celfocus.com");
 		variables.put("card", "123456789876543");
@@ -48,8 +46,7 @@ public class StartSagaAPI {
 				.bpmnProcessId("order-saga")
 				.latestVersion()
 				.variables(variables)
-				.send()
-				.join();
+				.send().join();
 
 		LOGGER.info(
 				"started instance for workflowKey='{}', bpmnProcessId='{}', version='{}' with workflowInstanceKey='{}'",
