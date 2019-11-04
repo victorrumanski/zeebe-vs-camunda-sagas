@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1i47e5n" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="3.4.1">
+  <bpmn:process id="saga" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Order Started">
+      <bpmn:outgoing>SequenceFlow_10kvv9b</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_10kvv9b" sourceRef="StartEvent_1" targetRef="join-task" />
+    <bpmn:serviceTask id="join-task" name="Create Customer">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">http://localhost:9991/api/saga/join</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="payload">
+              <camunda:script scriptFormat="JavaScript">var email = execution.getVariable("email");
+var card = execution.getVariable("card");
+var address = execution.getVariable("address");
+
+'{"email":"'+email+'", "card":"'+card+'", "address":"'+address+'"}';</camunda:script>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="JoinResponse">
+              <camunda:script scriptFormat="JavaScript">if (statusCode != 200) {
+    throw new org.camunda.bpm.engine.delegate.BpmnError("Join API Returned code " + statusCode);
+}
+
+print('join response'+response);
+connector.getParentVariableScope().setVariable('customer', response);
+response</camunda:script>
+            </camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_10kvv9b</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1mir7tm</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="order-task" name="Create Order">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">http://localhost:9991/api/saga/order</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="payload">
+              <camunda:script scriptFormat="JavaScript">'{"customer":'+execution.getVariable("customer")+', "items": '+execution.getVariable("items")+' }';</camunda:script>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="CreateOrderResponse">
+              <camunda:script scriptFormat="JavaScript">if (statusCode != 200) {
+    throw new org.camunda.bpm.engine.delegate.BpmnError("Create Order API Returned code " + statusCode);
+}
+
+print('order response'+response);
+connector.getParentVariableScope().setVariable('order', response);
+
+response</camunda:script>
+            </camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_1mir7tm</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0mki96f</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SequenceFlow_0mki96f" sourceRef="order-task" targetRef="pay-task" />
+    <bpmn:endEvent id="EndEvent_05cxici" name="Order Completed">
+      <bpmn:incoming>SequenceFlow_1iyxxss</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="pay-task" name="Payment">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">http://localhost:9991/api/saga/pay</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="payload">
+              <camunda:script scriptFormat="JavaScript">execution.getVariable("order")</camunda:script>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="PaymentResponse">
+              <camunda:script scriptFormat="JavaScript">if (statusCode != 200) {
+    throw new org.camunda.bpm.engine.delegate.BpmnError("Payment API Returned code " + statusCode);
+}
+
+print('pay response'+response);
+connector.getParentVariableScope().setVariable('payment', response);
+
+response</camunda:script>
+            </camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_0mki96f</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_14j08bf</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="charge-task" name="Charger">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">http://localhost:9991/api/saga/charge</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="payload">
+              <camunda:script scriptFormat="JavaScript">execution.getVariable("payment")</camunda:script>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="ChargeResponse">
+              <camunda:script scriptFormat="JavaScript">if (statusCode != 200) {
+    throw new org.camunda.bpm.engine.delegate.BpmnError("Charge API Returned code " + statusCode);
+}
+
+print('charge response'+response);
+connector.getParentVariableScope().setVariable('charge', response);
+
+response</camunda:script>
+            </camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_14j08bf</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1iyxxss</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SequenceFlow_14j08bf" sourceRef="pay-task" targetRef="charge-task" />
+    <bpmn:sequenceFlow id="SequenceFlow_1mir7tm" sourceRef="join-task" targetRef="order-task" />
+    <bpmn:sequenceFlow id="SequenceFlow_1iyxxss" sourceRef="charge-task" targetRef="EndEvent_05cxici" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="saga">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="192" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="176" y="78" width="67" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_10kvv9b_di" bpmnElement="SequenceFlow_10kvv9b">
+        <di:waypoint x="210" y="138" />
+        <di:waypoint x="210" y="197" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ServiceTask_0s326si_di" bpmnElement="join-task">
+        <dc:Bounds x="160" y="197" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_0f217pd_di" bpmnElement="order-task">
+        <dc:Bounds x="320" y="197" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0mki96f_di" bpmnElement="SequenceFlow_0mki96f">
+        <di:waypoint x="420" y="237" />
+        <di:waypoint x="480" y="237" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_05cxici_di" bpmnElement="EndEvent_05cxici">
+        <dc:Bounds x="672" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="647" y="78" width="85" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_05eohop_di" bpmnElement="pay-task">
+        <dc:Bounds x="480" y="197" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_0houypa_di" bpmnElement="charge-task">
+        <dc:Bounds x="640" y="197" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_14j08bf_di" bpmnElement="SequenceFlow_14j08bf">
+        <di:waypoint x="580" y="237" />
+        <di:waypoint x="640" y="237" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1mir7tm_di" bpmnElement="SequenceFlow_1mir7tm">
+        <di:waypoint x="260" y="237" />
+        <di:waypoint x="320" y="237" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1iyxxss_di" bpmnElement="SequenceFlow_1iyxxss">
+        <di:waypoint x="690" y="197" />
+        <di:waypoint x="690" y="138" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
